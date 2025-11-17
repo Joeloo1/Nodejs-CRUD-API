@@ -1,5 +1,6 @@
 const Product = require("./../models/productmodel");
 const APIFeatures = require("./../utils/apiFeatures");
+const catchAsync = require('./../utils/catchAsync')
 
 exports.aliasTopTours = (req, res, next) => {
   req.query.limit = "5";
@@ -9,8 +10,7 @@ exports.aliasTopTours = (req, res, next) => {
 };
 
 // GET ALL PROSUCTS
-exports.getAllProduct = async (req, res) => {
-  try {
+exports.getAllProduct = catchAsync(async (req, res) => {
     const features = new APIFeatures(Product.find(), req.query)
       .filter()
       .sort()
@@ -25,17 +25,10 @@ exports.getAllProduct = async (req, res) => {
         products,
       },
     });
-  } catch (err) {
-    res.status(404).json({
-      status: "Fail",
-      message: err,
-    });
-  }
-};
+});
 
 // CREATE PRODUCT
-exports.createProduct = async (req, res) => {
-  try {
+exports.createProduct = catchAsync(async (req, res) => {
     const newProduct = await Product.create(req.body);
 
     res.status(200).json({
@@ -44,17 +37,10 @@ exports.createProduct = async (req, res) => {
         product: newProduct,
       },
     });
-  } catch (err) {
-    res.status(404).json({
-      status: "Fail",
-      message: err,
-    });
-  }
-};
+});
 
 // GET PRODUCT
-exports.getProduct = async (req, res) => {
-  try {
+exports.getProduct = catchAsync(async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     res.status(200).json({
@@ -63,17 +49,10 @@ exports.getProduct = async (req, res) => {
         product,
       },
     });
-  } catch (err) {
-    res.status(404).json({
-      status: "Fail",
-      message: err,
-    });
-  }
-};
+});
 
 // UPDATE PRODUCT
-exports.updateProduct = async (req, res) => {
-  try {
+exports.updateProduct = catchAsync( async (req, res) => {
     const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -84,27 +63,14 @@ exports.updateProduct = async (req, res) => {
         product,
       },
     });
-  } catch (err) {
-    res.status(404).json({
-      status: "Fail",
-      message: err,
-    });
-  }
-};
+});
 
 // DELETE PRODUCT
-exports.deleteProduct = async (req, res) => {
-  try {
+exports.deleteProduct = catchAsync(async (req, res) => {
     await Product.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       status: "Success",
       data: null,
     });
-  } catch (err) {
-    res.status(404).json({
-      status: "Fail",
-      message: err,
-    });
-  }
-};
+});
