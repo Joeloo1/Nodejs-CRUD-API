@@ -14,7 +14,7 @@ app.use(express.json());
 app.use("/api/v1/products", productRouter);
 
 // HANDLING unhandled routes 
-app.all('*', (req, res, next) => {
+app.use( (req, res, next) => {
    next(new AppError(`Can't find ${req.originalUrl} on this server`, 404))
 });
 
