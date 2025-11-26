@@ -11,7 +11,7 @@ exports.aliasTopTours = (req, res, next) => {
 
 // GET ALL PROSUCTS
 exports.getAllProduct = catchAsync(async (req, res) => {
-    const features = new APIFeatures(Product.find(), req.query)
+    const features = new APIFeatures(Product.find().select('-reviews'), req.query)
       .filter()
       .sort()
       .limitFields()
