@@ -1,6 +1,8 @@
+const { client } = require("../Config/redis");
+const AppError = require("../utils/appError");
 const Product = require("./../models/productmodel");
 const APIFeatures = require("./../utils/apiFeatures");
-const catchAsync = require('./../utils/catchAsync')
+const catchAsync = require("./../utils/catchAsync");
 
 exports.aliasTopTours = (req, res, next) => {
   req.query.limit = "5";
@@ -11,66 +13,115 @@ exports.aliasTopTours = (req, res, next) => {
 
 // GET ALL PROSUCTS
 exports.getAllProduct = catchAsync(async (req, res) => {
-    const features = new APIFeatures(Product.find().select('-reviews'), req.query)
-      .filter()
-      .sort()
-      .limitFields()
-      .paginate();
-    const products = await features.query;
+  // Build a unique cache key
+  const cacheKey = `products:all:${JSON.stringify(req.query)}`;
+  // check Redis if the products are cached already
+  const cachedProducts = await client.get(cacheKey);
 
-    res.status(200).json({
+  if (cachedProducts) {
+    const products = JSON.parse(cachedProducts);
+
+    return res.status(200).json({
       status: "Success",
+      source: "cache",
       result: products.length,
       data: {
         products,
       },
     });
+  }
+  const features = new APIFeatures(Product.find().select("-reviews"), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate();
+  const products = await features.query;
+
+  // store result in cache
+  await client.setEx(cacheKey, 3600, JSON.stringify(products));
+
+  res.status(200).json({
+    status: "Success",
+    result: products.length,
+    data: {
+      products,
+    },
+  });
 });
 
 // CREATE PRODUCT
 exports.createProduct = catchAsync(async (req, res) => {
-    const newProduct = await Product.create(req.body);
+  const newProduct = await Product.create(req.body);
 
-    res.status(200).json({
-      status: "Success",
-      data: {
-        product: newProduct,
-      },
-    });
+  await client.del("products:all");
+
+  res.status(200).json({
+    status: "Success",
+    data: {
+      product: newProduct,
+    },
+  });
 });
 
 // GET PRODUCT
 exports.getProduct = catchAsync(async (req, res) => {
-    const product = await Product.findById(req.params.id);
+  const { id } = req.params;
+  const cacheKey = `products:${id}`;
 
-    res.status(200).json({
+  const cachedProduct = await client.get(cacheKey);
+
+  if (cachedProduct) {
+    return res.status(200).json({
       status: "Success",
+      source: "cache",
       data: {
-        product,
+        product: JSON.parse(cachedProduct),
       },
     });
+  }
+  const product = await Product.findById(req.params.id);
+
+  if (!product) {
+    return next(new AppError("Product not found", 404));
+  }
+
+  await client.setEx(cacheKey, 3600, JSON.stringify(products));
+
+  res.status(200).json({
+    status: "Success",
+    data: {
+      product,
+    },
+  });
 });
 
 // UPDATE PRODUCT
-exports.updateProduct = catchAsync( async (req, res) => {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    res.status(200).json({
-      status: "Success",
-      data: {
-        product,
-      },
-    });
+exports.updateProduct = catchAsync(async (req, res) => {
+  const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  await client.del(`products:${req.params.id}`);
+  await client.del(`products:all`);
+
+  res.status(200).json({
+    status: "Success",
+    data: {
+      product,
+    },
+  });
 });
 
 // DELETE PRODUCT
 exports.deleteProduct = catchAsync(async (req, res) => {
-    await Product.findByIdAndDelete(req.params.id);
+  await Product.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({
-      status: "Success",
-      data: null,
-    });
+  await client.del(`products:${req.params.id}`);
+  await client.del(`products:all`);
+
+  res.status(200).json({
+    status: "Success",
+    data: null,
+  });
 });
