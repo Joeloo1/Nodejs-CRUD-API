@@ -64,6 +64,6 @@ const productSchema = new mongoose.Schema({
   reviews: [reviewSchema],
 });
 
-const Product = mongoose.model("Product", productSchema);
+const Product = mongoose.model("Product", productSchema, "products");
 
 module.exports = Product;
