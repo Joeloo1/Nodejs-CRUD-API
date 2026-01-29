@@ -85,7 +85,7 @@ exports.getProduct = catchAsync(async (req, res) => {
     return next(new AppError("Product not found", 404));
   }
 
-  await client.setEx(cacheKey, 3600, JSON.stringify(products));
+  await client.setEx(cacheKey, 3600, JSON.stringify(product));
 
   res.status(200).json({
     status: "Success",
